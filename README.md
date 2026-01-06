@@ -4,15 +4,15 @@
 
 ## Features 功能特色
 
-- **網頁爬蟲 Web Scraping**: Selenium + ChromeDriver 自動化爬取
-- **驗證碼辨識 CAPTCHA Recognition**: ddddocr 自動辨識驗證碼
-- **動態行政區 Dynamic Districts**: 支援全台縣市，自動從網站抓取行政區列表
-- **資料庫儲存 Database Storage**: PostgreSQL 儲存，自動去除重複
+- **網頁爬蟲**: Selenium + ChromeDriver 自動化爬取
+- **驗證碼辨識**: ddddocr 自動辨識驗證碼
+- **動態行政區**: 支援全台縣市，自動從網站抓取行政區列表
+- **資料庫儲存**: PostgreSQL 儲存，自動去除重複
 - **REST API**: FastAPI + Swagger UI 互動式文件
-- **日誌監控 Log Monitoring**: Grafana + Loki 即時日誌視覺化
-- **告警通知 Alert Notifications**: Grafana Email 告警
-- **排程自動化 Scheduler**: APScheduler 定時執行爬蟲
-- **容器化部署 Docker**: Docker Compose 一鍵啟動
+- **日誌監控**: Grafana + Loki 即時日誌視覺化
+- **告警通知**: Grafana Email 告警
+- **排程自動化**: APScheduler 定時執行爬蟲
+- **容器化部署**: Docker Compose 一鍵啟動
 
 ---
 
@@ -47,45 +47,41 @@
 
 ---
 
-## 環境需求 Prerequisites
+## 環境需求
 
 | 需求 | 版本 | 檢查指令 |
 |------|------|----------|
 | Docker Desktop | 運行中 | `docker --version` |
 | Python | 3.10+ | `python3 --version` |
 | Chrome | 最新版 | 爬蟲需要 |
-| PostgreSQL | 15+ | Docker 提供 |
 
 ---
 
 ## 快速開始
 
-### 1. 複製專案並安裝套件
+### Step 1: 安裝 Python 套件
 
 ```bash
-# 建立虛擬環境
 python3 -m venv venv
 source venv/bin/activate
-
-# 安裝套件
 pip install -r requirements.txt
 ```
 
-### 2. 設定環境變數
+### Step 2: 設定環境變數
 
 ```bash
 cp .env.example .env
-# 編輯 .env 設定資料庫連線等參數
+# 編輯 .env，將 your_username/your_password 改為 postgres
 ```
 
-### 3. 啟動 Docker 服務 (PostgreSQL, Grafana, Loki)
+### Step 3: 啟動 Docker 服務
 
 ```bash
 cd 試題3/docker
 docker compose up -d
 ```
 
-### 4. 確認服務狀態 Verify Services
+### Step 4: 確認服務狀態
 
 ```bash
 docker compose ps
@@ -101,40 +97,29 @@ ris_grafana    Up             0.0.0.0:3000->3000/tcp
 ris_pgadmin    Up             0.0.0.0:5050->80/tcp
 ```
 
-### 5. 初始化資料庫 (Docker 已自動執行，可跳過)
-
-```bash
-# 若需手動執行 schema
-PGPASSWORD=postgres psql -h localhost -U postgres -d ris_scraper -f sql/schema.sql
-```
-
-### 6. 開啟服務
+### Step 5: 開啟服務
 
 | 服務 | 網址 | 帳號 / 密碼 |
 |------|------|-------------|
 | **Grafana** (日誌監控) | http://localhost:3000 | admin / admin |
-| **API Docs** (Swagger UI) | http://localhost:8000/docs | - |
-| **pgAdmin** (資料庫管理) | http://localhost:5050 | admin@example.com / admin |
+| **API Docs** (Swagger) | http://localhost:8000/docs | - |
+| **pgAdmin** (資料庫) | http://localhost:5050 | admin@example.com / admin |
 | **PostgreSQL** | localhost:5432 | postgres / postgres |
 
-### 7. 執行爬蟲
+### Step 6: 執行爬蟲
 
 ```bash
 cd 試題1
 python main.py --districts "大安區"
 ```
 
-### 8. 驗證資料
+### Step 7: 驗證資料
 
 ```bash
-# 透過瀏覽器開啟 API
 open "http://localhost:8000/records?city=臺北市&district=大安區&page_size=5"
-
-# 或使用 Swagger UI 互動式測試
-open "http://localhost:8000/docs"
 ```
 
-### 9. 停止服務
+### Step 8: 停止服務
 
 ```bash
 cd 試題3/docker
@@ -159,7 +144,7 @@ docker compose down
 cd 試題1
 
 # 爬取單一行政區
-python main.py --districts "大安區" --start-date "114-09-01" --end-date "114-11-30"
+python main.py --districts "大安區"
 
 # 爬取多個行政區
 python main.py --districts "大安區,中正區,信義區"
@@ -207,17 +192,10 @@ python main.py --fetch-districts
 
 ### 技術選型: 為何選擇 Selenium
 
-1. **動態網頁**: 戶政司網站使用 JavaScript 動態載入內容，需要瀏覽器渲染
-2. **表單互動**: 需要選擇縣市、行政區、填寫日期等表單操作
+1. **動態網頁**: 戶政司網站使用 JavaScript 動態載入內容
+2. **表單互動**: 需要選擇縣市、行政區、填寫日期等
 3. **驗證碼處理**: 需要擷取驗證碼圖片進行 OCR 辨識
 4. **分頁處理**: 搜尋結果可能有多頁，需要模擬點擊換頁
-
-### 異常處理
-
-- 網路請求失敗: 自動重試 3 次
-- 驗證碼辨識失敗: 自動刷新驗證碼重試
-- 無資料: 記錄 Log 並繼續下一區域
-- 網站結構變更: 記錄詳細錯誤訊息至 Log
 
 ---
 
@@ -227,70 +205,11 @@ python main.py --fetch-districts
 
 提供 RESTful API 查詢爬取的門牌資料。
 
-### 啟動服務
+### 啟動服務 (若未使用 Docker)
 
 ```bash
 cd 試題2
 uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### API 文件
-
-啟動後訪問: http://localhost:8000/docs (Swagger UI)
-
-### 查詢 API
-
-**Endpoint**: `GET /records`
-
-**Request**:
-```json
-{
-  "city": "臺北市",
-  "district": "大安區"
-}
-```
-
-**瀏覽器測試**:
-```bash
-open "http://localhost:8000/records?city=臺北市&district=大安區"
-```
-
-**cURL 範例**:
-```bash
-curl "http://localhost:8000/records?city=臺北市&district=大安區"
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "count": 150,
-  "data": [
-    {
-      "id": 1,
-      "city": "臺北市",
-      "district": "大安區",
-      "full_address": "臺北市大安區富台里19鄰信義路四段100巷5弄10號3樓之1",
-      "village": "富台里",
-      "neighborhood": "19",
-      "road": "信義路",
-      "section": "四段",
-      "lane": "100",
-      "alley": "5",
-      "number": "10",
-      "floor": "3",
-      "floor_dash": "1",
-      "assignment_date": "2025-09-15",
-      "assignment_type": "門牌初編"
-    }
-  ]
-}
-```
-
-### 健康檢查
-
-```bash
-curl http://localhost:8000/
 ```
 
 ### API Endpoints
@@ -315,89 +234,67 @@ curl http://localhost:8000/
 | `page` | int | 1 | 頁碼 |
 | `page_size` | int | 50 | 每頁筆數 (最大 100) |
 
+### 範例
+
+**瀏覽器測試**:
+```bash
+open "http://localhost:8000/records?city=臺北市&district=大安區"
+```
+
+**cURL**:
+```bash
+curl "http://localhost:8000/records?city=臺北市&district=大安區"
+```
+
+**Response**:
+```json
+{
+  "total": 150,
+  "page": 1,
+  "page_size": 50,
+  "records": [
+    {
+      "id": 1,
+      "city": "臺北市",
+      "district": "大安區",
+      "full_address": "臺北市大安區富台里19鄰信義路四段100巷5弄10號3樓之1",
+      "village": "富台里",
+      "road": "信義路",
+      "assignment_date": "2025-09-15",
+      "assignment_type": "門牌初編"
+    }
+  ]
+}
+```
+
 ---
 
 ## 試題3: Log 收集 & 異常通報
 
 ### 架構說明
 
-- **Loki**: 日誌收集與儲存
-- **Grafana**: 日誌查詢與視覺化
-- **Email Alert**: 異常狀況 Email 通知
-
-### 啟動服務
-
-```bash
-cd 試題3/docker
-
-# 設定環境變數 (SMTP 等)
-cp .env.example .env
-# 編輯 .env 填入 Gmail App Password (選填，用於 Email 告警)
-
-docker compose up -d
-```
-
-### 確認服務狀態
-
-```bash
-docker compose ps
-```
-
-**預期輸出**:
-```
-NAME           STATUS         PORTS
-ris_postgres   Up (healthy)   0.0.0.0:5432->5432/tcp
-ris_api        Up             0.0.0.0:8000->8000/tcp
-ris_loki       Up             0.0.0.0:3100->3100/tcp
-ris_grafana    Up             0.0.0.0:3000->3000/tcp
-ris_pgadmin    Up             0.0.0.0:5050->80/tcp
-```
-
-### 服務端口
-
-| 服務 | 端口 | 用途 |
+| 服務 | Port | 用途 |
 |------|------|------|
-| PostgreSQL | 5432 | 資料庫 |
-| API | 8000 | FastAPI 服務 |
-| Grafana | 3000 | 監控面板 |
-| Loki | 3100 | 日誌收集 |
-| pgAdmin | 5050 | 資料庫管理 |
+| Loki | 3100 | 日誌收集與儲存 |
+| Grafana | 3000 | 日誌查詢與視覺化 |
+| Email Alert | - | 異常狀況 Email 通知 |
 
-### Grafana 登入
+### Grafana Dashboard
 
-- URL: http://localhost:3000
-- 帳號: admin
-- 密碼: admin
-
-> Loki Data Source 已自動設定，無需手動配置
-
-### 預設 Dashboard
-
-系統已自動載入 **RIS Scraper Logs** Dashboard，包含:
+系統已自動載入 **RIS Scraper Logs** Dashboard:
 
 | Panel | 說明 |
 |-------|------|
 | Scraper Logs (24h) | 爬蟲 Log 數量統計 |
 | API Logs (24h) | API Log 數量統計 |
-| Warnings (24h) | 警告數量 (黃色警示) |
-| Errors (24h) | 錯誤數量 (紅色警示) |
+| Warnings (24h) | 警告數量 (黃色) |
+| Errors (24h) | 錯誤數量 (紅色) |
 | Scraper Logs (Live) | 爬蟲即時 Log |
 | API Logs (Live) | API 即時 Log |
-| Errors & Warnings | 錯誤與警告彙整 |
 
-**存取方式**:
-1. 登入 Grafana (admin / admin)
-2. 左側選單 → **Dashboards**
-3. 點選 **RIS Scraper Logs**
+**存取方式**: http://localhost:3000 → Dashboards → RIS Scraper Logs
 
 ### Log 查詢 (Explore)
-
-若需自訂查詢，可使用 Explore:
-
-1. 登入 Grafana (admin / admin)
-2. 左側選單 → **Explore**
-3. 上方選擇 Data Source: **Loki**
-4. 輸入查詢語法，點擊 **Run query**:
 
 ```logql
 # 查詢爬蟲 Log
@@ -410,18 +307,9 @@ ris_pgadmin    Up             0.0.0.0:5050->80/tcp
 {job="scraper"} |= "ERROR"
 ```
 
-> **注意**: 需先執行爬蟲程式 (試題1) 才會有 Log 資料
-
-### 異常通報設定
-
-系統會在以下情況發送 Email 通知:
-
-1. **爬蟲執行失敗**: 網站無法連線、驗證碼持續失敗等
-2. **API 查詢結果為空**: 使用者查詢但資料庫無符合資料
+> **注意**: 需先執行爬蟲程式才會有 Log 資料
 
 ### Email 告警規則
-
-系統已預設告警規則:
 
 | 告警 | 觸發條件 | 嚴重度 |
 |------|----------|--------|
@@ -434,26 +322,18 @@ ris_pgadmin    Up             0.0.0.0:5050->80/tcp
 編輯 `試題3/docker/.env`:
 
 ```env
-SMTP_HOST=smtp.gmail.com:587
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 SMTP_FROM=your_email@gmail.com
 ```
 
-> Gmail 需使用 App Password，請至 https://myaccount.google.com/apppasswords 產生
-
-**設定收件人**:
-1. Grafana → Alerting → Contact points
-2. 編輯 `email-alerts`
-3. 填入收件人 Email
+> Gmail 需使用 App Password: https://myaccount.google.com/apppasswords
 
 ---
 
 ## 試題4: 系統架構圖
 
 詳見 `試題4/architecture.md`
-
-### 架構總覽
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -476,15 +356,9 @@ SMTP_FROM=your_email@gmail.com
 
 ---
 
-## 自動化排程
-
-### APScheduler 排程
-
-系統內建 APScheduler 支援定期執行爬蟲，排程程式位於 `試題1/scheduler.py`。
+## 自動化排程 (加分題)
 
 ### 環境變數設定
-
-編輯 `.env` 設定排程參數:
 
 ```env
 SCHEDULER_ENABLED=true
@@ -518,37 +392,33 @@ nohup python3 scheduler.py > logs/scheduler.log 2>&1 &
 
 ---
 
-## 常見問題 Troubleshooting
+## 常見問題
 
 ### Q: Port 被佔用?
 
 ```bash
-# 查看 port 使用狀況
 lsof -i :5432
 lsof -i :3000
-
-# 停止本機 PostgreSQL (macOS)
-brew services stop postgresql@15
+brew services stop postgresql@15  # macOS
 ```
 
-### Q: 驗證碼辨識失敗怎麼辦?
+### Q: 驗證碼辨識失敗?
 
-A: 系統會自動刷新驗證碼重試 (最多 5 次)。確認 ddddocr 已安裝: `pip show ddddocr`
+系統會自動重試 (最多 5 次)。確認 ddddocr 已安裝: `pip show ddddocr`
 
 ### Q: 資料庫連線失敗?
 
-A: 確認 PostgreSQL 服務已啟動，並檢查 `.env` 中的連線設定。
+確認 Docker 服務已啟動: `docker compose ps`
 
 ### Q: Grafana 看不到 Log?
 
 1. 確認 Loki 運行中: `docker ps | grep loki`
-2. 確認爬蟲有安裝 `python-logging-loki`
-3. 執行爬蟲後等待 1-2 分鐘
+2. 執行爬蟲後等待 1-2 分鐘
 
 ### Q: Email 告警沒收到?
 
 1. 確認 `試題3/docker/.env` 的 SMTP 設定
-2. 使用 Gmail 應用程式密碼 (非一般密碼)
+2. 使用 Gmail 應用程式密碼
 3. Grafana → Alerting → Contact points → Test
 
 ### Q: pgAdmin CSRF 錯誤?
