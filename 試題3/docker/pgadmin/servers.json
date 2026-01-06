@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "RIS Scraper DB",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "ris_scraper",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
