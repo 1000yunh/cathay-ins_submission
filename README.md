@@ -76,6 +76,15 @@ docker compose up -d
 PGPASSWORD=postgres psql -h localhost -U postgres -d ris_scraper -f sql/schema.sql
 ```
 
+### 5. 開啟服務
+
+| 服務 | 網址 | 帳號 / 密碼 |
+|------|------|-------------|
+| **Grafana** (日誌監控) | http://localhost:3000 | admin / admin |
+| **API Docs** (Swagger UI) | http://localhost:8000/docs | - |
+| **pgAdmin** (資料庫管理) | http://localhost:5050 | admin@example.com / admin |
+| **PostgreSQL** | localhost:5432 | postgres / postgres |
+
 ---
 
 ## 試題1: 爬蟲程式
