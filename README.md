@@ -2,6 +2,20 @@
 
 本專案為內政部戶政司門牌編釘資料的自動化爬蟲系統，包含資料擷取、API 查詢服務、Log 監控與異常通報功能。
 
+## Features 功能特色
+
+- **網頁爬蟲 Web Scraping**: Selenium + ChromeDriver 自動化爬取
+- **驗證碼辨識 CAPTCHA Recognition**: ddddocr 自動辨識驗證碼
+- **動態行政區 Dynamic Districts**: 支援全台縣市，自動從網站抓取行政區列表
+- **資料庫儲存 Database Storage**: PostgreSQL 儲存，自動去除重複
+- **REST API**: FastAPI + Swagger UI 互動式文件
+- **日誌監控 Log Monitoring**: Grafana + Loki 即時日誌視覺化
+- **告警通知 Alert Notifications**: Grafana Email 告警
+- **排程自動化 Scheduler**: APScheduler 定時執行爬蟲
+- **容器化部署 Docker**: Docker Compose 一鍵啟動
+
+---
+
 ## 專案結構
 
 ```
@@ -33,12 +47,14 @@
 
 ---
 
-## 環境需求
+## 環境需求 Prerequisites
 
-- Python 3.10+
-- PostgreSQL 15+
-- Docker & Docker Compose
-- Google Chrome (for Selenium)
+| 需求 | 版本 | 檢查指令 |
+|------|------|----------|
+| Docker Desktop | 運行中 | `docker --version` |
+| Python | 3.10+ | `python3 --version` |
+| Chrome | 最新版 | 爬蟲需要 |
+| PostgreSQL | 15+ | Docker 提供 |
 
 ---
 
@@ -84,6 +100,30 @@ PGPASSWORD=postgres psql -h localhost -U postgres -d ris_scraper -f sql/schema.s
 | **API Docs** (Swagger UI) | http://localhost:8000/docs | - |
 | **pgAdmin** (資料庫管理) | http://localhost:5050 | admin@example.com / admin |
 | **PostgreSQL** | localhost:5432 | postgres / postgres |
+
+### 6. 執行爬蟲
+
+```bash
+cd 試題1
+python main.py --districts "大安區"
+```
+
+### 7. 驗證資料
+
+```bash
+# 透過瀏覽器開啟 API
+open "http://localhost:8000/records?city=臺北市&district=大安區&page_size=5"
+
+# 或使用 Swagger UI 互動式測試
+open "http://localhost:8000/docs"
+```
+
+### 8. 停止服務
+
+```bash
+cd 試題3/docker
+docker compose down
+```
 
 ---
 
@@ -237,6 +277,28 @@ curl "http://localhost:8000/records?city=臺北市&district=大安區"
 curl http://localhost:8000/
 ```
 
+### API Endpoints
+
+| 方法 | 端點 | 說明 |
+|------|------|------|
+| GET | `/` | 健康檢查 |
+| GET | `/records` | 查詢門牌記錄 |
+| GET | `/records/{id}` | 取得單筆記錄 |
+| GET | `/stats` | 統計資訊 |
+| GET | `/alerts` | 告警歷史 |
+| GET | `/docs` | Swagger UI |
+
+### 查詢參數
+
+| 參數 | 型別 | 範例 | 說明 |
+|------|------|------|------|
+| `city` | string | 臺北市 | 依縣市篩選 |
+| `district` | string | 大安區 | 依行政區篩選 |
+| `start_date` | string | 2025-01-01 | 起始日期 |
+| `end_date` | string | 2025-12-31 | 結束日期 |
+| `page` | int | 1 | 頁碼 |
+| `page_size` | int | 50 | 每頁筆數 (最大 100) |
+
 ---
 
 ## 試題3: Log 收集 & 異常通報
@@ -341,6 +403,16 @@ ris_pgadmin    Up             0.0.0.0:5050->80/tcp
 1. **爬蟲執行失敗**: 網站無法連線、驗證碼持續失敗等
 2. **API 查詢結果為空**: 使用者查詢但資料庫無符合資料
 
+### Email 告警規則
+
+系統已預設告警規則:
+
+| 告警 | 觸發條件 | 嚴重度 |
+|------|----------|--------|
+| Scraper Error Detected | 爬蟲日誌出現 ERROR | error |
+| CAPTCHA Verification Failed | 驗證碼辨識失敗 | warning |
+| API Error Detected | API 日誌出現 ERROR | error |
+
 ### Email 設定
 
 編輯 `試題3/docker/.env`:
@@ -353,6 +425,11 @@ SMTP_FROM=your_email@gmail.com
 ```
 
 > Gmail 需使用 App Password，請至 https://myaccount.google.com/apppasswords 產生
+
+**設定收件人**:
+1. Grafana → Alerting → Contact points
+2. 編輯 `email-alerts`
+3. 填入收件人 Email
 
 ---
 
@@ -383,7 +460,7 @@ SMTP_FROM=your_email@gmail.com
 
 ---
 
-## 加分題: 自動化排程
+## 自動化排程
 
 ### APScheduler 排程
 
@@ -420,11 +497,22 @@ python scheduler.py
 
 ---
 
-## 常見問題
+## 常見問題 Troubleshooting
+
+### Q: Port 被佔用?
+
+```bash
+# 查看 port 使用狀況
+lsof -i :5432
+lsof -i :3000
+
+# 停止本機 PostgreSQL (macOS)
+brew services stop postgresql@15
+```
 
 ### Q: 驗證碼辨識失敗怎麼辦?
 
-A: 系統會自動刷新驗證碼重試。若持續失敗，可設定 `CAPTCHA_MANUAL_INPUT=true` 手動輸入。
+A: 系統會自動刷新驗證碼重試 (最多 5 次)。確認 ddddocr 已安裝: `pip show ddddocr`
 
 ### Q: 資料庫連線失敗?
 
@@ -432,7 +520,18 @@ A: 確認 PostgreSQL 服務已啟動，並檢查 `.env` 中的連線設定。
 
 ### Q: Grafana 看不到 Log?
 
-A: 確認 Loki 服務已啟動，並檢查 `LOKI_ENABLED=true`。
+1. 確認 Loki 運行中: `docker ps | grep loki`
+2. 確認爬蟲有安裝 `python-logging-loki`
+3. 執行爬蟲後等待 1-2 分鐘
 
----
+### Q: Email 告警沒收到?
 
+1. 確認 `試題3/docker/.env` 的 SMTP 設定
+2. 使用 Gmail 應用程式密碼 (非一般密碼)
+3. Grafana → Alerting → Contact points → Test
+
+### Q: pgAdmin CSRF 錯誤?
+
+```bash
+docker restart ris_pgadmin
+```
