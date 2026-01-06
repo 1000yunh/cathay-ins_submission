@@ -85,14 +85,30 @@ cd 試題3/docker
 docker compose up -d
 ```
 
-### 4. 初始化資料庫
+### 4. 確認服務狀態 Verify Services
 
 ```bash
-# 連線到 PostgreSQL 並執行 schema (密碼: postgres)
+docker compose ps
+```
+
+**預期輸出**:
+```
+NAME           STATUS         PORTS
+ris_postgres   Up (healthy)   0.0.0.0:5432->5432/tcp
+ris_api        Up             0.0.0.0:8000->8000/tcp
+ris_loki       Up             0.0.0.0:3100->3100/tcp
+ris_grafana    Up             0.0.0.0:3000->3000/tcp
+ris_pgadmin    Up             0.0.0.0:5050->80/tcp
+```
+
+### 5. 初始化資料庫 (Docker 已自動執行，可跳過)
+
+```bash
+# 若需手動執行 schema
 PGPASSWORD=postgres psql -h localhost -U postgres -d ris_scraper -f sql/schema.sql
 ```
 
-### 5. 開啟服務
+### 6. 開啟服務
 
 | 服務 | 網址 | 帳號 / 密碼 |
 |------|------|-------------|
@@ -101,14 +117,14 @@ PGPASSWORD=postgres psql -h localhost -U postgres -d ris_scraper -f sql/schema.s
 | **pgAdmin** (資料庫管理) | http://localhost:5050 | admin@example.com / admin |
 | **PostgreSQL** | localhost:5432 | postgres / postgres |
 
-### 6. 執行爬蟲
+### 7. 執行爬蟲
 
 ```bash
 cd 試題1
 python main.py --districts "大安區"
 ```
 
-### 7. 驗證資料
+### 8. 驗證資料
 
 ```bash
 # 透過瀏覽器開啟 API
@@ -118,7 +134,7 @@ open "http://localhost:8000/records?city=臺北市&district=大安區&page_size=
 open "http://localhost:8000/docs"
 ```
 
-### 8. 停止服務
+### 9. 停止服務
 
 ```bash
 cd 試題3/docker
@@ -480,7 +496,12 @@ SCHEDULER_TIMEZONE=Asia/Taipei
 
 ```bash
 cd 試題1
-python scheduler.py
+
+# 前景執行 (測試)
+python3 scheduler.py
+
+# 背景執行 (生產)
+nohup python3 scheduler.py > logs/scheduler.log 2>&1 &
 ```
 
 ### Cron 表達式說明
