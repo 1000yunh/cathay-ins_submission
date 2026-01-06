@@ -1,0 +1,136 @@
+services:
+  # PostgreSQL 資料庫
+  postgres:
+    image: postgres:15-alpine
+    container_name: ris_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ris_scraper}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Taipei
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - ris_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI 服務
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: ris_api
+    environment:
+      # Timezone
+      - TZ=Asia/Taipei
+      # Database
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ris_scraper}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-ris_scraper}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      # API
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      # Loki (Log Aggregation)
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      # SMTP (Email Alert)
+      - SMTP_ENABLED=${SMTP_ENABLED:-true}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-465}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_TO=${SMTP_TO:-}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ../logs:/app/logs
+      - ../data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    networks:
+      - ris_network
+    restart: unless-stopped
+
+  # pgAdmin (資料庫管理界面，選用)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ris_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - ris_network
+    depends_on:
+      - postgres
+
+  # Loki (Log Aggregation)
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: ris_loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - ris_network
+    restart: unless-stopped
+
+  # Grafana (Visualization + Alerting)
+  grafana:
+    build:
+      context: .
+      dockerfile: Dockerfile.grafana
+    container_name: ris_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=Asia/Taipei
+      # SMTP for Email Alerts (Gmail)
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=${SMTP_USER:-}
+      - GF_SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - GF_SMTP_FROM_ADDRESS=${SMTP_FROM:-noreply@grafana.local}
+      - GF_SMTP_FROM_NAME=RIS Scraper Alerts
+      - GF_SMTP_STARTTLS_POLICY=MandatoryStartTLS
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+    networks:
+      - ris_network
+    restart: unless-stopped
+
+networks:
+  ris_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  loki_data:
+  grafana_data:

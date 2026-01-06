@@ -1,0 +1,13 @@
+FROM grafana/grafana:10.2.0
+
+USER root
+
+# Copy provisioning files into the image
+COPY grafana/provisioning /etc/grafana/provisioning
+
+# Fix permissions
+RUN chown -R grafana:root /etc/grafana/provisioning && \
+    chmod -R 644 /etc/grafana/provisioning && \
+    find /etc/grafana/provisioning -type d -exec chmod 755 {} \;
+
+USER grafana
